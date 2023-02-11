@@ -30,84 +30,73 @@ use Psr\Http\Server\RequestHandlerInterface;
 
 class MarkAsSpammerController implements RequestHandlerInterface
 {
-    /**
-     * @var Dispatcher
-     */
-    protected $bus;
+	/**
+	 * @var Dispatcher
+	 */
+	protected $bus;
 
-    /**
-     * @var EventsDispatcher
-     */
-    protected $events;
+	/**
+	 * @var EventsDispatcher
+	 */
+	protected $events;
 
-    /**
-     * @var ExtensionManager
-     */
-    protected $extensions;
+	/**
+	 * @var ExtensionManager
+	 */
+	protected $extensions;
 
-    /**
-     * @param EventsDispatcher $events
-     * @param Dispatcher       $bus
-     * @param ExtensionManager $extensions
-     */
-    public function __construct(Dispatcher $bus, EventsDispatcher $events, ExtensionManager $extensions)
-    {
-        $this->bus = $bus;
-        $this->events = $events;
-        $this->extensions = $extensions;
-    }
+	/**
+	 * @param EventsDispatcher $events
+	 * @param Dispatcher	   $bus
+	 * @param ExtensionManager $extensions
+	 */
+	public function __construct(Dispatcher $bus, EventsDispatcher $events, ExtensionManager $extensions)
+	{
+		$this->bus = $bus;
+		$this->events = $events;
+		$this->extensions = $extensions;
+	}
 
-    /**
-     * Handle the request and return a response.
-     *
-     * @param ServerRequestInterface $request
-     *
-     * @return ResponseInterface
-     */
-    public function handle(ServerRequestInterface $request): ResponseInterface
-    {
-        $actor = RequestUtil::getActor($request);
+	/**
+	 * Handle the request and return a response.
+	 *
+	 * @param ServerRequestInterface $request
+	 *
+	 * @return ResponseInterface
+	 */
+	public function handle(ServerRequestInterface $request): ResponseInterface
+	{
+		$actor = RequestUtil::getActor($request);
 
-        $userId = Arr::get($request->getQueryParams(), 'id');
-        $user = User::findOrFail($userId);
+		$userId = Arr::get($request->getQueryParams(), 'id');
+		$user = User::findOrFail($userId);
 
-        $actor->assertCan('spamblock', $user);
+		$actor->assertCan('spamblock', $user);
 
-        $flarumSuspend = $this->extensions->isEnabled('flarum-suspend');
-        $flarumFlags = $this->extensions->isEnabled('flarum-flags');
+		$user->discussions()->chunk(50, function ($discussions) use ($actor) {
+			foreach ($discussions as $discussion) {
+				$this->bus->dispatch(
+					new DeleteDiscussion($discussion->id, $actor)
+				);
+			}
+		});
 
-        if ($flarumSuspend && !isset($user->suspended_until)) {
-            $this->bus->dispatch(
-                new DeleteUser($user->id, $actor)
-            );
-        }
+		$user->posts()->chunk(50, function ($posts) use ($actor) {
+			foreach ($posts as $post) {
+				$this->bus->dispatch(
+					new DeletePost($post->id, $actor)
+				);
+			}
+		});
 
-        $user->discussions()->where('hidden_at', null)->chunk(50, function ($discussions) use ($actor) {
-            foreach ($discussions as $discussion) {
-                $this->bus->dispatch(
-                    new DeleteDiscussion($discussion->id, $actor)
-                );
-            }
-        });
+		$this->bus->dispatch(
+			 new DeleteUser($user->id, $actor)
+		);
 
-        $user->posts()->where('hidden_at', null)->chunk(50, function ($posts) use ($actor, $flarumFlags) {
-            foreach ($posts as $post) {
-                $this->bus->dispatch(
-                    new DeletePost($post->id, $actor)
-                );
+		$this->events->dispatch(
+			new MarkedUserAsSpammer($user, $actor)
+		);
 
-                if ($flarumFlags) {
-                    $this->bus->dispatch(
-                        new DeleteFlags($post->id, $actor)
-                    );
-                }
-            }
-        });
-
-        $this->events->dispatch(
-            new MarkedUserAsSpammer($user, $actor)
-        );
-
-        return (new Response())->withStatus(204);
-    }
+		return (new Response())->withStatus(204);
+	}
 }
