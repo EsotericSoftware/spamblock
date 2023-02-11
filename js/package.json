@@ -1,5 +1,5 @@
 {
-  "name": "@esotericsoftware/spamblock",
+  "name": "@fof/spamblock",
   "version": "0.0.0",
   "private": true,
   "prettier": "@flarum/prettier-config",

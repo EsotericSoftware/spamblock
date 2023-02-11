@@ -7,7 +7,7 @@ import User from 'flarum/common/models/User';
 import Model from 'flarum/common/Model';
 import ItemList from 'flarum/common/utils/ItemList';
 
-app.initializers.add('esotericsoftware/spamblock', () => {
+app.initializers.add('fof/spamblock', () => {
   User.prototype.canSpamblock = Model.attribute('canSpamblock');
 
   extend(UserControls, 'moderationControls', function (items: ItemList, user: User) {
