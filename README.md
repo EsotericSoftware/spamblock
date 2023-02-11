@@ -1,6 +1,6 @@
 # Fork information
 
-This fork deletes users instead of suspending them and deletes discussions and posts instead of hiding them.
+This fork deletes the user instead of suspending them and deletes discussions and posts instead of hiding them.
 
 # Spamblock by FriendsOfFlarum
 

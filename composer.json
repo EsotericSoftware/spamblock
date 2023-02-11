@@ -1,6 +1,6 @@
 {
   "name": "esotericsoftware/spamblock",
-  "description": "Mark user as spammer, deleting the user and it's posts and discussions",
+  "description": "Mark user as spammer, deleting the user and their posts and discussions",
   "keywords": [
     "flarum"
   ],
@@ -76,4 +76,4 @@
   "config": {
     "sort-packages": true
   }
-}
+}	

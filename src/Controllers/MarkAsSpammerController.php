@@ -12,12 +12,12 @@
 namespace FoF\Spamblock\Controllers;
 
 use Carbon\Carbon;
-use Flarum\Discussion\Command\EditDiscussion;
+use Flarum\Discussion\Command\DeleteDiscussion;
 use Flarum\Extension\ExtensionManager;
 use Flarum\Flags\Command\DeleteFlags;
 use Flarum\Http\RequestUtil;
-use Flarum\Post\Command\EditPost;
-use Flarum\User\Command\EditUser;
+use Flarum\Post\Command\DeletePost;
+use Flarum\User\Command\DeleteUser;
 use Flarum\User\User;
 use FoF\Spamblock\Event\MarkedUserAsSpammer;
 use Illuminate\Contracts\Bus\Dispatcher;
@@ -78,18 +78,22 @@ class MarkAsSpammerController implements RequestHandlerInterface
 
         if ($flarumSuspend && !isset($user->suspended_until)) {
             $this->bus->dispatch(
-                new EditUser($user->id, $actor, [
-                    'attributes' => ['suspendedUntil' => Carbon::now()->addYear(20)],
-                ])
+                new DeleteUser($user->id, $actor)
             );
         }
+
+        $user->discussions()->where('hidden_at', null)->chunk(50, function ($discussions) use ($actor) {
+            foreach ($discussions as $discussion) {
+                $this->bus->dispatch(
+                    new DeleteDiscussion($discussion->id, $actor)
+                );
+            }
+        });
 
         $user->posts()->where('hidden_at', null)->chunk(50, function ($posts) use ($actor, $flarumFlags) {
             foreach ($posts as $post) {
                 $this->bus->dispatch(
-                    new EditPost($post->id, $actor, [
-                        'attributes' => ['isHidden' => true],
-                    ])
+                    new DeletePost($post->id, $actor)
                 );
 
                 if ($flarumFlags) {
@@ -97,16 +101,6 @@ class MarkAsSpammerController implements RequestHandlerInterface
                         new DeleteFlags($post->id, $actor)
                     );
                 }
-            }
-        });
-
-        $user->discussions()->where('hidden_at', null)->chunk(50, function ($discussions) use ($actor) {
-            foreach ($discussions as $discussion) {
-                $this->bus->dispatch(
-                    new EditDiscussion($discussion->id, $actor, [
-                        'attributes' => ['isHidden' => true],
-                    ])
-                );
             }
         });
 
