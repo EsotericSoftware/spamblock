@@ -1,3 +1,7 @@
+# Fork information
+
+This fork deletes users instead of suspending them and deletes discussions and posts instead of hiding them.
+
 # Spamblock by FriendsOfFlarum
 
 ![License](https://img.shields.io/badge/license-MIT-blue.svg) [![Latest Stable Version](https://img.shields.io/packagist/v/fof/spamblock.svg)](https://packagist.org/packages/fof/spamblock)
