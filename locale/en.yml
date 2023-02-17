@@ -1,7 +1,7 @@
 fof-spamblock:
   forum:
     user_controls:
-      spammer_button: Spammer
+      spammer_button: Delete spammer
       spammer_confirmation: "Are you sure you want to \n• Delete all the user's discussions and posts \n• Delete the user"
 
   admin:
